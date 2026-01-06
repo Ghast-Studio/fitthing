@@ -1,3 +1,4 @@
+import { AppleSignIn } from "@/components";
 import { useSignIn } from "@clerk/clerk-expo";
 import { Link, useRouter } from "expo-router";
 import React from "react";
@@ -41,6 +42,7 @@ export default function Page() {
   return (
     <View>
       <Text>Sign in</Text>
+      <AppleSignIn />
       <TextInput
         autoCapitalize="none"
         value={emailAddress}
