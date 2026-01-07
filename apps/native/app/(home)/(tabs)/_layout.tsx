@@ -1,57 +1,20 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { useThemeColor } from "heroui-native";
+import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 
 export default function TabLayout() {
-    const foregroundColor = useThemeColor("foreground");
-    const backgroundColor = useThemeColor("background");
-    const accentColor = useThemeColor("accent");
-    const mutedColor = useThemeColor("muted");
-
     return (
-        <Tabs
-            screenOptions={{
-                headerShown: false,
-                tabBarActiveTintColor: accentColor,
-                tabBarInactiveTintColor: mutedColor,
-                tabBarStyle: {
-                    backgroundColor: backgroundColor,
-                    borderTopColor: mutedColor,
-                    borderTopWidth: 0.5,
-                },
-                tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: "500",
-                },
-            }}
-        >
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: "Home",
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="home" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="exercises"
-                options={{
-                    title: "Übungen",
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="barbell" size={size} color={color} />
-                    ),
-                }}
-            />
-            <Tabs.Screen
-                name="profile"
-                options={{
-                    title: "Profil",
-                    tabBarIcon: ({ color, size }) => (
-                        <Ionicons name="person" size={size} color={color} />
-                    ),
-                }}
-            />
-        </Tabs>
+        <NativeTabs>
+            <NativeTabs.Trigger name="index">
+                <Label>Home</Label>
+                <Icon sf="house.fill" drawable="custom_android_drawable" />
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="exercises">
+                <Label>Übungen</Label>
+                <Icon sf="figure.strengthtraining.traditional" drawable="custom_android_drawable" />
+            </NativeTabs.Trigger>
+            <NativeTabs.Trigger name="profile">
+                <Label>Profil</Label>
+                <Icon sf="person.fill" drawable="custom_android_drawable" />
+            </NativeTabs.Trigger>
+        </NativeTabs>
     );
 }

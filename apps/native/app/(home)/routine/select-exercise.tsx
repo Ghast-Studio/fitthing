@@ -35,8 +35,9 @@ export default function SelectExercisePage() {
     const handleSelectExercise = (exerciseId: string) => {
         addExercise({
             exerciseId,
-            sets: 3,
-            reps: 10,
+            order: 0, // Will be auto-assigned by the store
+            targetSets: 3,
+            targetReps: 10,
         });
         router.back();
     };

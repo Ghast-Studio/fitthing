@@ -1,5 +1,5 @@
 import { ActivityIndicator, View } from "react-native";
-import { Stack } from "expo-router";
+import { Stack, Redirect } from "expo-router";
 import { useConvexAuth } from "convex/react";
 import { useThemeColor } from "heroui-native";
 
@@ -31,106 +31,118 @@ export default function HomeLayout() {
                 contentStyle: { backgroundColor },
             }}
         >
-            {/* Main Tabs */}
-            <Stack.Screen
-                name="(tabs)"
-                options={{
-                    headerShown: false,
-                }}
-            />
+            {/* Protected routes - only accessible when authenticated */}
+            <Stack.Protected guard={isAuthenticated}>
+                {/* Main Tabs */}
+                <Stack.Screen
+                    name="(tabs)"
+                    options={{
+                        headerShown: false,
+                    }}
+                />
 
-            {/* Onboarding */}
-            <Stack.Screen
-                name="onboarding"
-                options={{
-                    title: "Willkommen!",
-                    headerShown: false,
-                    presentation: "fullScreenModal",
-                }}
-            />
+                {/* Onboarding */}
+                <Stack.Screen
+                    name="onboarding"
+                    options={{
+                        title: "Willkommen!",
+                        headerShown: false,
+                        presentation: "fullScreenModal",
+                    }}
+                />
 
-            {/* Exercise Details */}
-            <Stack.Screen
-                name="exercise/[id]"
-                options={{
-                    presentation: "modal",
-                    title: "Übung",
-                    headerShown: true,
-                }}
-            />
+                {/* Exercise Details */}
+                <Stack.Screen
+                    name="exercise/[id]"
+                    options={{
+                        presentation: "modal",
+                        title: "Übung",
+                        headerShown: true,
+                    }}
+                />
 
-            {/* Friends */}
-            <Stack.Screen
-                name="friend/friends"
-                options={{
-                    title: "Freunde",
-                    headerShown: true,
-                }}
-            />
-            <Stack.Screen
-                name="friend/add-friend"
-                options={{
-                    presentation: "modal",
-                    title: "Freund hinzufügen",
-                    headerShown: true,
-                }}
-            />
+                {/* Friends */}
+                <Stack.Screen
+                    name="friend/friends"
+                    options={{
+                        title: "Freunde",
+                        headerShown: true,
+                    }}
+                />
+                <Stack.Screen
+                    name="friend/add-friend"
+                    options={{
+                        presentation: "modal",
+                        title: "Freund hinzufügen",
+                        headerShown: true,
+                    }}
+                />
 
-            {/* Routines */}
-            <Stack.Screen
-                name="routine/create"
-                options={{
-                    title: "Routine erstellen",
-                    headerShown: true,
-                }}
-            />
-            <Stack.Screen
-                name="routine/select-exercise"
-                options={{
-                    presentation: "modal",
-                    title: "Übung auswählen",
-                    headerShown: true,
-                }}
-            />
+                {/* Routines */}
+                <Stack.Screen
+                    name="routine/create"
+                    options={{
+                        title: "Routine erstellen",
+                        headerShown: true,
+                    }}
+                />
+                <Stack.Screen
+                    name="routine/select-exercise"
+                    options={{
+                        presentation: "modal",
+                        title: "Übung auswählen",
+                        headerShown: true,
+                    }}
+                />
 
-            {/* Profile */}
-            <Stack.Screen
-                name="profile/[id]"
-                options={{
-                    title: "Profil",
-                    headerShown: true,
-                }}
-            />
-            <Stack.Screen
-                name="profile/edit"
-                options={{
-                    title: "Profil bearbeiten",
-                    headerShown: true,
-                }}
-            />
+                {/* Profile */}
+                <Stack.Screen
+                    name="profile/[id]"
+                    options={{
+                        title: "Profil",
+                        headerShown: true,
+                    }}
+                />
+                <Stack.Screen
+                    name="profile/edit"
+                    options={{
+                        title: "Profil bearbeiten",
+                        headerShown: true,
+                    }}
+                />
 
-            {/* Workouts */}
-            <Stack.Screen
-                name="workout/active"
-                options={{
-                    title: "Aktives Training",
-                    headerShown: true,
-                }}
-            />
-            <Stack.Screen
-                name="workout/[id]"
-                options={{
-                    title: "Training",
-                    headerShown: true,
-                }}
-            />
-            <Stack.Screen
-                name="workout/spectate/[id]"
-                options={{
-                    title: "Training beobachten",
-                    headerShown: true,
-                }}
-            />
+                {/* Workouts */}
+                <Stack.Screen
+                    name="workout/active"
+                    options={{
+                        title: "Aktives Training",
+                        headerShown: true,
+                    }}
+                />
+                <Stack.Screen
+                    name="workout/[id]"
+                    options={{
+                        title: "Training",
+                        headerShown: true,
+                    }}
+                />
+                <Stack.Screen
+                    name="workout/spectate/[id]"
+                    options={{
+                        title: "Training beobachten",
+                        headerShown: true,
+                    }}
+                />
+            </Stack.Protected>
+            <Stack.Protected guard={!isAuthenticated}>
+                {/* Auth Routes - only accessible when not authenticated */}
+                <Stack.Screen
+                    name="welcome"
+                    options={{
+                        headerShown: false,
+                    }}
+                />
+            </Stack.Protected>
         </Stack>
     );
 }

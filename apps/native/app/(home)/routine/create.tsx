@@ -9,7 +9,7 @@ import { Text } from "react-native";
 
 import { api } from "@ex/backend/convex/_generated/api";
 
-import { useRoutineStore } from "@/store/store";
+import { useRoutineStore, RoutineExercise } from "@/store/store";
 
 export default function CreateRoutinePage() {
     const backgroundColor = useThemeColor("background");
@@ -29,6 +29,7 @@ export default function CreateRoutinePage() {
         setDescription,
         setVisibility,
         removeExercise,
+        updateExercise,
         reset,
     } = useRoutineStore();
 
@@ -231,21 +232,50 @@ export default function CreateRoutinePage() {
                                     borderRadius: 12,
                                     padding: 16,
                                     marginBottom: 8,
-                                    flexDirection: "row",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
                                 }}
                             >
-                                <View>
-                                    <Text style={{ color: foregroundColor, fontWeight: "600" }}>
-                                        Exercise {index + 1}
-                                    </Text>
-                                    <Text style={{ color: mutedForeground, fontSize: 13 }}>
-                                        {exercise.sets} sets × {exercise.reps} reps
-                                    </Text>
+                                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={{ color: foregroundColor, fontWeight: "600" }}>
+                                            Exercise {index + 1}
+                                        </Text>
+                                        <Text style={{ color: mutedForeground, fontSize: 13 }}>
+                                            {exercise.targetSets} sets × {exercise.targetReps} reps
+                                        </Text>
+                                    </View>
+                                    <Pressable onPress={() => removeExercise(exercise.exerciseId)}>
+                                        <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                                    </Pressable>
                                 </View>
-                                <Pressable onPress={() => removeExercise(exercise.exerciseId)}>
-                                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                                {/* Unilateral Toggle */}
+                                <Pressable
+                                    onPress={() => updateExercise(exercise.exerciseId, { isUnilateral: !exercise.isUnilateral })}
+                                    style={{
+                                        flexDirection: "row",
+                                        alignItems: "center",
+                                        marginTop: 12,
+                                        gap: 8,
+                                    }}
+                                >
+                                    <View
+                                        style={{
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: 4,
+                                            borderWidth: 2,
+                                            borderColor: exercise.isUnilateral ? primaryColor : mutedForeground,
+                                            backgroundColor: exercise.isUnilateral ? primaryColor : "transparent",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                        }}
+                                    >
+                                        {exercise.isUnilateral && (
+                                            <Ionicons name="checkmark" size={14} color="#fff" />
+                                        )}
+                                    </View>
+                                    <Text style={{ color: foregroundColor, fontSize: 14 }}>
+                                        Unilateral (L/R separat tracken)
+                                    </Text>
                                 </Pressable>
                             </Surface>
                         ))

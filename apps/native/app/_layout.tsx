@@ -13,7 +13,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AppThemeProvider } from "@/contexts/app-theme-context";
 
 export const unstable_settings = {
-    initialRouteName: "(drawer)",
+    initialRouteName: "(home)",
 };
 
 const convex = new ConvexReactClient(env.EXPO_PUBLIC_CONVEX_URL, {

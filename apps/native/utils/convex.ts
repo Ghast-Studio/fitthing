@@ -11,7 +11,8 @@ export { api };
 
 // Type exports for convenience
 export type RoutineId = Id<"routines">;
-export type WorkoutId = Id<"workoutSessions">;
+export type WorkoutSessionId = Id<"workoutSessions">;
+export type WorkoutSetId = Id<"workoutSets">;
 export type ExerciseDoc =
     typeof api.exercises.getById._returnType extends Promise<infer T>
         ? T extends { exercise: infer E }

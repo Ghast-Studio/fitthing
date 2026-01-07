@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useUser } from "@clerk/clerk-expo";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "convex/react";
-import { Button, Spinner, Surface, useThemeColor } from "heroui-native";
+import { Spinner, Surface, useThemeColor } from "heroui-native";
 
 import { Container } from "@/components/container";
 
@@ -14,7 +14,6 @@ import { useWorkoutSession } from "@/utils/useWorkoutSession";
 
 export default function HomePage() {
     const { user } = useUser();
-    const backgroundColor = useThemeColor("background");
     const accentColor = useThemeColor("accent");
     const mutedColor = useThemeColor("muted");
 
@@ -30,10 +29,7 @@ export default function HomePage() {
 
     const isLoading = routines === undefined || needsOnboarding === undefined;
 
-    const { activeSession } = useWorkoutSession();
-
-    // Find active workout routine name
-    const activeWorkoutRoutine = routines?.find((r) => r._id === activeSession?.routineId);
+    const { hasActiveWorkout, routineName, getActiveDuration } = useWorkoutSession();
 
     const formatDuration = (ms: number) => {
         const minutes = Math.floor(ms / 60000);
@@ -62,7 +58,7 @@ export default function HomePage() {
                 </View>
 
                 {/* Active Workout Banner */}
-                {activeSession && (
+                {hasActiveWorkout && (
                     <Pressable
                         onPress={() => router.push("/(home)/workout/active")}
                         className="bg-accent rounded-xl p-4 mb-5"
@@ -73,12 +69,12 @@ export default function HomePage() {
                                     Aktives Training
                                 </Text>
                                 <Text className="text-white/80 text-sm">
-                                    {activeWorkoutRoutine?.name || "Schnelles Training"}
+                                    {routineName || "Workout"}
                                 </Text>
                             </View>
                             <View className="flex-row items-center gap-2">
                                 <Text className="text-white font-semibold">
-                                    {formatDuration(Date.now() - activeSession.startedAt)}
+                                    {formatDuration(getActiveDuration())}
                                 </Text>
                                 <Ionicons name="arrow-forward" size={20} color="#fff" />
                             </View>
@@ -86,58 +82,56 @@ export default function HomePage() {
                     </Pressable>
                 )}
 
-                {/* Quick Actions */}
-                <View className="mb-6">
-                    <Text className="text-foreground text-lg font-bold mb-3">Schnellaktionen</Text>
-                    <View className="flex-row gap-3">
-                        <Pressable
-                            onPress={() => router.push("/(home)/(tabs)/exercises")}
-                            className="flex-1 bg-background rounded-xl p-4 items-center border border-muted"
-                        >
-                            <Ionicons name="barbell" size={28} color={accentColor} />
-                            <Text className="text-foreground mt-2 font-semibold">Übungen</Text>
-                        </Pressable>
-                        <Pressable
-                            onPress={() => router.push("/(home)/routine/create")}
-                            className="flex-1 bg-background rounded-xl p-4 items-center border border-muted"
-                        >
-                            <Ionicons name="add-circle" size={28} color={accentColor} />
-                            <Text className="text-foreground mt-2 font-semibold">Neue Routine</Text>
-                        </Pressable>
-                    </View>
+                {/* Routines List */}
+                <View className="flex-row justify-between items-center mb-3">
+                    <Text className="text-foreground text-lg font-bold">Meine Routinen</Text>
+                    <Pressable
+                        onPress={() => router.push("/(home)/routine/create")}
+                        className="flex-row items-center"
+                    >
+                        <Ionicons name="add" size={20} color={accentColor} />
+                        <Text className="text-accent font-semibold ml-1">Neu</Text>
+                    </Pressable>
                 </View>
 
-                {/* My Routines */}
-                <View className="mb-6">
-                    <Text className="text-foreground text-lg font-bold mb-3">Meine Routinen</Text>
-                    {routines && routines.length > 0 ? (
-                        routines.map((routine) => (
-                            <Surface key={routine._id} className="rounded-xl p-4 mb-3">
-                                <Text className="text-foreground text-base font-semibold">
-                                    {routine.name}
-                                </Text>
-                                <Text className="text-muted mt-1">
-                                    {routine.exercises.length} Übungen
-                                </Text>
-                                <Button
-                                    className="mt-3"
-                                    onPress={() =>
-                                        router.navigate(`/(home)/workout/${routine._id}`)
-                                    }
-                                >
-                                    <Button.Label>Starten</Button.Label>
-                                </Button>
+                {routines && routines.length > 0 ? (
+                    routines.map((routine) => (
+                        <Pressable
+                            key={routine._id}
+                            onPress={() => router.push(`/(home)/routine/${routine._id}` as any)}
+                        >
+                            <Surface className="rounded-xl p-4 mb-3">
+                                <View className="flex-row items-center">
+                                    <View className="flex-1">
+                                        <Text className="text-foreground text-base font-semibold">
+                                            {routine.name}
+                                        </Text>
+                                        <Text className="text-muted mt-1">
+                                            {routine.exercises.length} Übungen •{" "}
+                                            {routine.exercises.reduce(
+                                                (sum, ex: any) => sum + (ex.targetSets || ex.sets || 0),
+                                                0
+                                            )}{" "}
+                                            Sets
+                                        </Text>
+                                    </View>
+                                    <Ionicons
+                                        name="chevron-forward"
+                                        size={20}
+                                        color={mutedColor}
+                                    />
+                                </View>
                             </Surface>
-                        ))
-                    ) : (
-                        <Surface className="rounded-xl p-6 items-center">
-                            <Ionicons name="fitness" size={48} color={mutedColor} />
-                            <Text className="text-muted mt-3 text-center">
-                                Noch keine Routinen. Erstelle deine erste Routine!
-                            </Text>
-                        </Surface>
-                    )}
-                </View>
+                        </Pressable>
+                    ))
+                ) : (
+                    <Surface className="rounded-xl p-6 items-center">
+                        <Ionicons name="fitness" size={48} color={mutedColor} />
+                        <Text className="text-muted mt-3 text-center">
+                            Noch keine Routinen. Erstelle deine erste Routine!
+                        </Text>
+                    </Surface>
+                )}
             </ScrollView>
         </Container>
     );

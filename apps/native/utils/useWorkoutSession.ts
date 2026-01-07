@@ -1,22 +1,18 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { err, Result } from "neverthrow";
+import { err, ok, Result } from "neverthrow";
 
 import { api } from "@ex/backend/convex/_generated/api";
-import type { WorkoutProgress } from "@ex/backend/convex/schema";
 
-import { RoutineId } from "./convex";
+import { RoutineId, WorkoutSessionId, WorkoutSetId } from "./convex";
 import { wrapConvexMutation } from "./result";
-import { router } from "expo-router";
-
-export interface WorkoutSet {
-    exerciseId: string;
-    setNumber: number;
-    targetReps: number;
-    completedReps: number;
-    weight: number;
-    completed: boolean;
-}
+import {
+    LocalSet,
+    SetLabel,
+    Side,
+    useActiveWorkoutStore,
+    WeightUnit,
+} from "../store/store";
 
 export type WorkoutError = {
     type: "mutation_error" | "invalid_state" | "not_found";
@@ -35,202 +31,381 @@ function createWorkoutError(
 export function useWorkoutSession() {
     const [isStarting, setIsStarting] = useState(false);
     const [isCompleting, setIsCompleting] = useState(false);
+    const [isSavingSet, setIsSavingSet] = useState(false);
 
+    // Convex mutations
     const startMutation = useMutation(api.workouts.start);
-    const saveMutation = useMutation(api.workouts.saveProgress).withOptimisticUpdate(
-        (localStore, args) => {
-            const currentWorkout = localStore.getQuery(api.workouts.getActive);
-            // If we have the active workout loaded, update it optimistically
-            if (
-                currentWorkout !== undefined &&
-                currentWorkout !== null &&
-                currentWorkout._id === args.workoutId
-            ) {
-                localStore.setQuery(
-                    api.workouts.getActive,
-                    {},
-                    {
-                        ...currentWorkout,
-                        state: args.progress,
-                        lastHeartbeat: args.progress.lastUpdatedAt ?? Date.now(),
-                    }
-                );
-            }
-        }
-    );
+    const addSetMutation = useMutation(api.workouts.addSet);
+    const updateSetMutation = useMutation(api.workouts.updateSet);
+    const deleteSetMutation = useMutation(api.workouts.deleteSet);
     const completeMutation = useMutation(api.workouts.complete);
     const cancelMutation = useMutation(api.workouts.cancel);
+    const pauseMutation = useMutation(api.workouts.pause);
+    const resumeMutation = useMutation(api.workouts.resume);
+    const heartbeatMutation = useMutation(api.workouts.heartbeat);
 
-    const activeWorkout = useQuery(api.workouts.getActive);
+    // Convex queries
+    const activeWorkoutQuery = useQuery(api.workouts.getActive);
 
-    const activeSession = useMemo(() => {
-        if (!activeWorkout) return null;
-        return {
-            workoutId: activeWorkout._id,
-            routineId: activeWorkout.routineId,
-            status: activeWorkout.status,
-            startedAt: activeWorkout.startedAt,
-        };
-    }, [activeWorkout]);
+    // Zustand store
+    const store = useActiveWorkoutStore();
 
-    const sets: WorkoutSet[] = useMemo(() => {
-        return activeWorkout?.state?.sets ?? [];
-    }, [activeWorkout]);
+    // Sync from Convex query to store on initial load
+    useEffect(() => {
+        if (activeWorkoutQuery && !store.workoutSessionId) {
+            // Restore workout state from server
+            store.startWorkout(
+                activeWorkoutQuery._id,
+                activeWorkoutQuery.routineId,
+                activeWorkoutQuery.routine?.name ?? "Workout",
+                activeWorkoutQuery.routine?.exercises ?? []
+            );
 
-    const notes = useMemo(() => {
-        return activeWorkout?.state?.notes ?? "";
-    }, [activeWorkout]);
+            // Restore sets from server
+            for (const set of activeWorkoutQuery.sets ?? []) {
+                store.addSet({
+                    exerciseId: set.exerciseId,
+                    exerciseSetNumber: set.exerciseSetNumber,
+                    reps: set.reps,
+                    weight: set.weight,
+                    weightUnit: set.weightUnit as WeightUnit,
+                    side: set.side as Side | undefined,
+                    label: set.label as SetLabel | undefined,
+                    note: set.note,
+                    rpe: set.rpe,
+                });
+                // Mark as saved with DB ID
+                const localSets = store.sets;
+                const lastSet = localSets[localSets.length - 1];
+                if (lastSet) {
+                    store.markSetSaved(lastSet.localId, set._id);
+                }
+            }
+        }
+    }, [activeWorkoutQuery, store.workoutSessionId]);
 
-    const hasActiveWorkout = activeWorkout?.status === "active";
+    // Heartbeat every 30 seconds
+    useEffect(() => {
+        if (!store.workoutSessionId || store.isPaused) return;
+
+        const interval = setInterval(() => {
+            heartbeatMutation({ workoutId: store.workoutSessionId as WorkoutSessionId });
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [store.workoutSessionId, store.isPaused, heartbeatMutation]);
+
+    const hasActiveWorkout = !!store.workoutSessionId;
 
     const startWorkout = useCallback(
         async (
-            routineId?: string,
-            initialSets: WorkoutSet[] = [],
+            routineId: string,
+            routineName: string,
+            exercises: any[],
             visibility: "private" | "friends" | "public" = "private"
-        ): Promise<Result<any, WorkoutError>> => {
+        ): Promise<Result<string, WorkoutError>> => {
             setIsStarting(true);
-
-            const now = Date.now();
-            const initialProgress: WorkoutProgress = {
-                sets: initialSets,
-                startedAt: now,
-                lastUpdatedAt: now,
-            };
 
             try {
                 const result = await wrapConvexMutation(
                     startMutation,
                     {
-                        routineId: routineId as RoutineId | undefined,
+                        routineId: routineId as RoutineId,
                         visibility,
-                        initialProgress,
                     },
                     (error) =>
                         createWorkoutError("mutation_error", "Failed to start workout", error)
                 );
 
-                return result;
+                if (result.isOk()) {
+                    const { workoutId, routine } = result.value;
+                    store.startWorkout(
+                        workoutId,
+                        routineId,
+                        routineName,
+                        exercises
+                    );
+                    return ok(workoutId);
+                }
+
+                return err(result.error);
             } finally {
                 setIsStarting(false);
             }
         },
-        [startMutation]
+        [startMutation, store]
+    );
+
+    const addSet = useCallback(
+        async (
+            exerciseId: string,
+            reps: number,
+            weight: number,
+            weightUnit: WeightUnit,
+            options?: {
+                side?: Side;
+                label?: SetLabel;
+                note?: string;
+                rpe?: number;
+            }
+        ): Promise<Result<string, WorkoutError>> => {
+            if (!store.workoutSessionId) {
+                return err(createWorkoutError("invalid_state", "No active workout"));
+            }
+
+            // Get next exercise set number
+            const exerciseSets = store.sets.filter((s) => s.exerciseId === exerciseId);
+            const exerciseSetNumber = exerciseSets.length + 1;
+
+            // Add to local store first (optimistic)
+            const localId = store.addSet({
+                exerciseId,
+                exerciseSetNumber,
+                reps,
+                weight,
+                weightUnit,
+                side: options?.side,
+                label: options?.label,
+                note: options?.note,
+                rpe: options?.rpe,
+            });
+
+            setIsSavingSet(true);
+
+            try {
+                const result = await wrapConvexMutation(
+                    addSetMutation,
+                    {
+                        workoutSessionId: store.workoutSessionId as WorkoutSessionId,
+                        exerciseId,
+                        reps,
+                        weight,
+                        weightUnit,
+                        side: options?.side,
+                        label: options?.label,
+                        note: options?.note,
+                        rpe: options?.rpe,
+                    },
+                    (error) => createWorkoutError("mutation_error", "Failed to add set", error)
+                );
+
+                if (result.isOk()) {
+                    store.markSetSaved(localId, result.value.setId);
+                    return ok(result.value.setId);
+                }
+
+                // Rollback on error
+                store.removeSet(localId);
+                return err(result.error);
+            } finally {
+                setIsSavingSet(false);
+            }
+        },
+        [store, addSetMutation]
     );
 
     const updateSet = useCallback(
         async (
-            index: number,
-            updates: Partial<WorkoutSet>
+            localId: string,
+            updates: Partial<{
+                reps: number;
+                weight: number;
+                weightUnit: WeightUnit;
+                side: Side;
+                label: SetLabel;
+                note: string;
+                rpe: number;
+            }>
         ): Promise<Result<void, WorkoutError>> => {
-            if (!activeWorkout || activeWorkout.status !== "active") {
-                return err(createWorkoutError("invalid_state", "No active workout found"));
+            const set = store.sets.find((s) => s.localId === localId);
+            if (!set) {
+                return err(createWorkoutError("not_found", "Set not found"));
             }
 
-            const updatedSets = sets.map((s, i) => (i === index ? { ...s, ...updates } : s));
+            // Update local store immediately
+            store.updateSet(localId, updates);
 
-            const progress: WorkoutProgress = {
-                sets: updatedSets,
-                notes: notes || undefined,
-                startedAt: activeWorkout.startedAt,
-                lastUpdatedAt: Date.now(),
-            };
+            // If saved to DB, update on server
+            if (set.dbId) {
+                const result = await wrapConvexMutation(
+                    updateSetMutation,
+                    {
+                        setId: set.dbId as WorkoutSetId,
+                        ...updates,
+                    },
+                    (error) => createWorkoutError("mutation_error", "Failed to update set", error)
+                );
 
-            const result = await wrapConvexMutation(
-                saveMutation,
-                {
-                    workoutId: activeWorkout._id,
-                    progress,
-                },
-                (error) => createWorkoutError("mutation_error", "Failed to update set", error)
-            );
-
-            return result.map(() => undefined);
-        },
-        [activeWorkout, sets, notes, saveMutation]
-    );
-
-    const setNotes = useCallback(
-        async (newNotes: string): Promise<Result<void, WorkoutError>> => {
-            if (!activeWorkout || activeWorkout.status !== "active") {
-                return err(createWorkoutError("invalid_state", "No active workout found"));
+                if (result.isErr()) {
+                    // Revert local change
+                    store.updateSet(localId, set);
+                    return err(result.error);
+                }
             }
 
-            const progress: WorkoutProgress = {
-                sets,
-                notes: newNotes || undefined,
-                startedAt: activeWorkout.startedAt,
-                lastUpdatedAt: Date.now(),
-            };
-
-            const result = await wrapConvexMutation(
-                saveMutation,
-                {
-                    workoutId: activeWorkout._id,
-                    progress,
-                },
-                (error) => createWorkoutError("mutation_error", "Failed to update notes", error)
-            );
-
-            return result.map(() => undefined);
+            return ok(undefined);
         },
-        [activeWorkout, sets, saveMutation]
+        [store, updateSetMutation]
     );
 
-    const completeWorkout = useCallback(async (): Promise<Result<void, WorkoutError>> => {
-        if (!activeWorkout) {
-            return err(createWorkoutError("not_found", "No active workout found"));
+    const removeSet = useCallback(
+        async (localId: string): Promise<Result<void, WorkoutError>> => {
+            const set = store.sets.find((s) => s.localId === localId);
+            if (!set) {
+                return err(createWorkoutError("not_found", "Set not found"));
+            }
+
+            // Store for potential rollback
+            const setBackup = { ...set };
+
+            // Remove locally first
+            store.removeSet(localId);
+
+            // If saved to DB, delete on server
+            if (set.dbId) {
+                const result = await wrapConvexMutation(
+                    deleteSetMutation,
+                    { setId: set.dbId as WorkoutSetId },
+                    (error) => createWorkoutError("mutation_error", "Failed to delete set", error)
+                );
+
+                if (result.isErr()) {
+                    // Re-add the set on error
+                    store.addSet(setBackup);
+                    return err(result.error);
+                }
+            }
+
+            return ok(undefined);
+        },
+        [store, deleteSetMutation]
+    );
+
+    const pauseWorkout = useCallback(async (): Promise<Result<void, WorkoutError>> => {
+        if (!store.workoutSessionId) {
+            return err(createWorkoutError("invalid_state", "No active workout"));
         }
 
-        setIsCompleting(true);
+        store.pause();
 
-        try {
-            const result = await wrapConvexMutation(
-                completeMutation,
-                {
-                    workoutId: activeWorkout._id,
-                },
-                (error) => createWorkoutError("mutation_error", "Failed to complete workout", error)
-            );
+        const result = await wrapConvexMutation(
+            pauseMutation,
+            { workoutId: store.workoutSessionId as WorkoutSessionId },
+            (error) => createWorkoutError("mutation_error", "Failed to pause workout", error)
+        );
 
-            return result.map(() => undefined);
-        } finally {
-            setIsCompleting(false);
+        if (result.isErr()) {
+            store.resume();
+            return err(result.error);
         }
-    }, [activeWorkout, completeMutation]);
+
+        return ok(undefined);
+    }, [store, pauseMutation]);
+
+    const resumeWorkout = useCallback(async (): Promise<Result<void, WorkoutError>> => {
+        if (!store.workoutSessionId) {
+            return err(createWorkoutError("invalid_state", "No active workout"));
+        }
+
+        store.resume();
+
+        const result = await wrapConvexMutation(
+            resumeMutation,
+            { workoutId: store.workoutSessionId as WorkoutSessionId },
+            (error) => createWorkoutError("mutation_error", "Failed to resume workout", error)
+        );
+
+        if (result.isErr()) {
+            store.pause();
+            return err(result.error);
+        }
+
+        return ok(undefined);
+    }, [store, resumeMutation]);
+
+    const completeWorkout = useCallback(
+        async (notes?: string): Promise<Result<void, WorkoutError>> => {
+            if (!store.workoutSessionId) {
+                return err(createWorkoutError("not_found", "No active workout found"));
+            }
+
+            setIsCompleting(true);
+
+            try {
+                const result = await wrapConvexMutation(
+                    completeMutation,
+                    {
+                        workoutId: store.workoutSessionId as WorkoutSessionId,
+                        notes,
+                    },
+                    (error) =>
+                        createWorkoutError("mutation_error", "Failed to complete workout", error)
+                );
+
+                if (result.isOk()) {
+                    store.reset();
+                }
+
+                return result.map(() => undefined);
+            } finally {
+                setIsCompleting(false);
+            }
+        },
+        [store, completeMutation]
+    );
 
     const cancelWorkout = useCallback(async (): Promise<Result<void, WorkoutError>> => {
-        if (!activeWorkout) {
+        if (!store.workoutSessionId) {
             return err(createWorkoutError("not_found", "No active workout found"));
         }
 
         const result = await wrapConvexMutation(
             cancelMutation,
-            {
-                workoutId: activeWorkout._id,
-            },
+            { workoutId: store.workoutSessionId as WorkoutSessionId },
             (error) => createWorkoutError("mutation_error", "Failed to cancel workout", error)
         );
 
+        if (result.isOk()) {
+            store.reset();
+        }
+
         return result.map(() => undefined);
-    }, [activeWorkout, cancelMutation]);
+    }, [store, cancelMutation]);
 
     return {
-        activeSession,
-        sets,
-        notes,
+        // State
+        workoutSessionId: store.workoutSessionId,
+        routineId: store.routineId,
+        routineName: store.routineName,
+        exercises: store.exercises,
+        currentExerciseIndex: store.currentExerciseIndex,
+        sets: store.sets,
+        startedAt: store.startedAt,
+        isPaused: store.isPaused,
         hasActiveWorkout,
 
+        // Exercise navigation
+        setCurrentExerciseIndex: store.setCurrentExerciseIndex,
+        nextExercise: store.nextExercise,
+        previousExercise: store.previousExercise,
+        getCurrentExerciseSets: store.getCurrentExerciseSets,
+
+        // Duration
+        getActiveDuration: store.getActiveDuration,
+
+        // Actions
         startWorkout,
+        addSet,
         updateSet,
-        setNotes,
+        removeSet,
+        pauseWorkout,
+        resumeWorkout,
         completeWorkout,
         cancelWorkout,
 
+        // Loading states
         isStarting,
         isCompleting,
-
-        isSyncing: false,
-        syncError: null,
+        isSavingSet,
     };
 }
