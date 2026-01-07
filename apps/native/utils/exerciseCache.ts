@@ -9,149 +9,135 @@ const EXERCISE_DB_KEY = "@exercise_database";
 const EXERCISE_VERSION_KEY = "@exercise_version";
 
 export interface ExerciseDatabase {
-  version: string;
-  timestamp: number;
-  exercises: ExerciseType[];
+    version: string;
+    timestamp: number;
+    exercises: ExerciseType[];
 }
 
 export type ExerciseCacheError = {
-  type: "storage_error" | "parse_error" | "not_found";
-  message: string;
-  originalError?: unknown;
+    type: "storage_error" | "parse_error" | "not_found";
+    message: string;
+    originalError?: unknown;
 };
 
 function createError(
-  type: ExerciseCacheError["type"],
-  message: string,
-  originalError?: unknown
+    type: ExerciseCacheError["type"],
+    message: string,
+    originalError?: unknown
 ): ExerciseCacheError {
-  return { type, message, originalError };
+    return { type, message, originalError };
 }
 
 /**
  * Get the current version of the local exercise database
  */
-export async function getLocalVersion(): Promise<
-  Result<string | null, ExerciseCacheError>
-> {
-  return fromThrowable(
-    async () => {
-      const version = await AsyncStorage.getItem(EXERCISE_VERSION_KEY);
-      return version;
-    },
-    (error) => createError("storage_error", "Failed to get local version", error)
-  );
+export async function getLocalVersion(): Promise<Result<string | null, ExerciseCacheError>> {
+    return fromThrowable(
+        async () => {
+            const version = await AsyncStorage.getItem(EXERCISE_VERSION_KEY);
+            return version;
+        },
+        (error) => createError("storage_error", "Failed to get local version", error)
+    );
 }
 
 /**
  * Get all exercises from local storage
  */
 export async function getLocalExercises(): Promise<
-  Result<ExerciseType[] | null, ExerciseCacheError>
+    Result<ExerciseType[] | null, ExerciseCacheError>
 > {
-  return fromThrowable(
-    async () => {
-      const data = await AsyncStorage.getItem(EXERCISE_DB_KEY);
-      if (!data) return null;
+    return fromThrowable(
+        async () => {
+            const data = await AsyncStorage.getItem(EXERCISE_DB_KEY);
+            if (!data) return null;
 
-      try {
-        const db: ExerciseDatabase = JSON.parse(data);
-        return db.exercises;
-      } catch (parseError) {
-        throw createError(
-          "parse_error",
-          "Failed to parse exercise database",
-          parseError
-        );
-      }
-    },
-    (error) => {
-      if (error && typeof error === "object" && "type" in error) {
-        return error as ExerciseCacheError;
-      }
-      return createError("storage_error", "Failed to get local exercises", error);
-    }
-  );
+            try {
+                const db: ExerciseDatabase = JSON.parse(data);
+                return db.exercises;
+            } catch (parseError) {
+                throw createError("parse_error", "Failed to parse exercise database", parseError);
+            }
+        },
+        (error) => {
+            if (error && typeof error === "object" && "type" in error) {
+                return error as ExerciseCacheError;
+            }
+            return createError("storage_error", "Failed to get local exercises", error);
+        }
+    );
 }
 
 /**
  * Save exercises to local storage with version
  */
 export async function saveExercisesToLocal(
-  exercises: ExerciseType[],
-  version: string
+    exercises: ExerciseType[],
+    version: string
 ): Promise<Result<void, ExerciseCacheError>> {
-  return fromThrowable(
-    async () => {
-      const db: ExerciseDatabase = {
-        version,
-        timestamp: Date.now(),
-        exercises,
-      };
+    return fromThrowable(
+        async () => {
+            const db: ExerciseDatabase = {
+                version,
+                timestamp: Date.now(),
+                exercises,
+            };
 
-      await AsyncStorage.multiSet([
-        [EXERCISE_DB_KEY, JSON.stringify(db)],
-        [EXERCISE_VERSION_KEY, version],
-      ]);
-    },
-    (error) =>
-      createError("storage_error", "Failed to save exercises to local storage", error)
-  );
+            await AsyncStorage.multiSet([
+                [EXERCISE_DB_KEY, JSON.stringify(db)],
+                [EXERCISE_VERSION_KEY, version],
+            ]);
+        },
+        (error) => createError("storage_error", "Failed to save exercises to local storage", error)
+    );
 }
 
 /**
  * Clear local exercise cache
  */
-export async function clearLocalExercises(): Promise<
-  Result<void, ExerciseCacheError>
-> {
-  return fromThrowable(
-    async () => {
-      await AsyncStorage.multiRemove([EXERCISE_DB_KEY, EXERCISE_VERSION_KEY]);
-    },
-    (error) =>
-      createError("storage_error", "Failed to clear local exercises", error)
-  );
+export async function clearLocalExercises(): Promise<Result<void, ExerciseCacheError>> {
+    return fromThrowable(
+        async () => {
+            await AsyncStorage.multiRemove([EXERCISE_DB_KEY, EXERCISE_VERSION_KEY]);
+        },
+        (error) => createError("storage_error", "Failed to clear local exercises", error)
+    );
 }
 
 /**
  * Get database info (version and timestamp)
  */
 export async function getLocalDatabaseInfo(): Promise<
-  Result<
-    {
-      version: string | null;
-      timestamp: number | null;
-      exerciseCount: number;
-    } | null,
-    ExerciseCacheError
-  >
+    Result<
+        {
+            version: string | null;
+            timestamp: number | null;
+            exerciseCount: number;
+        } | null,
+        ExerciseCacheError
+    >
 > {
-  return fromThrowable(
-    async () => {
-      const data = await AsyncStorage.getItem(EXERCISE_DB_KEY);
-      if (!data) return null;
+    return fromThrowable(
+        async () => {
+            const data = await AsyncStorage.getItem(EXERCISE_DB_KEY);
+            if (!data) return null;
 
-      try {
-        const db: ExerciseDatabase = JSON.parse(data);
-        return {
-          version: db.version,
-          timestamp: db.timestamp,
-          exerciseCount: db.exercises.length,
-        };
-      } catch (parseError) {
-        throw createError(
-          "parse_error",
-          "Failed to parse exercise database",
-          parseError
-        );
-      }
-    },
-    (error) => {
-      if (error && typeof error === "object" && "type" in error) {
-        return error as ExerciseCacheError;
-      }
-      return createError("storage_error", "Failed to get database info", error);
-    }
-  );
+            try {
+                const db: ExerciseDatabase = JSON.parse(data);
+                return {
+                    version: db.version,
+                    timestamp: db.timestamp,
+                    exerciseCount: db.exercises.length,
+                };
+            } catch (parseError) {
+                throw createError("parse_error", "Failed to parse exercise database", parseError);
+            }
+        },
+        (error) => {
+            if (error && typeof error === "object" && "type" in error) {
+                return error as ExerciseCacheError;
+            }
+            return createError("storage_error", "Failed to get database info", error);
+        }
+    );
 }

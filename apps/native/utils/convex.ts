@@ -13,8 +13,8 @@ export { api };
 export type RoutineId = Id<"routines">;
 export type WorkoutId = Id<"workoutSessions">;
 export type ExerciseDoc =
-  typeof api.exercises.getById._returnType extends Promise<infer T>
-    ? T extends { exercise: infer E }
-      ? E
-      : never
-    : never;
+    typeof api.exercises.getById._returnType extends Promise<infer T>
+        ? T extends { exercise: infer E }
+            ? E
+            : never
+        : never;
