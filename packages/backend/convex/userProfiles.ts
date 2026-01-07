@@ -97,6 +97,24 @@ export const createOnboarding = mutation({
     ),
     units: v.optional(v.union(v.literal("metric"), v.literal("imperial"))),
     goals: v.optional(v.array(v.string())),
+    recordingPlan: v.optional(
+      v.union(
+        v.literal("minimal"),
+        v.literal("balanced"),
+        v.literal("detailed"),
+        v.literal("custom"),
+        v.null()
+      )
+    ),
+    restTime: v.optional(
+      v.union(
+        v.literal("1min"),
+        v.literal("2min"),
+        v.literal("5min"),
+        v.literal("custom"),
+        v.null()
+      )
+    ),
     preferredWorkoutTime: v.optional(
       v.union(
         v.literal("morning"),
@@ -129,6 +147,8 @@ export const createOnboarding = mutation({
         level: args.level ?? existing.level,
         units: args.units ?? existing.units,
         goals: args.goals ?? existing.goals,
+        recordingPlan: args.recordingPlan ?? existing.recordingPlan,
+        restTime: args.restTime ?? existing.restTime,
         preferredWorkoutTime:
           args.preferredWorkoutTime ?? existing.preferredWorkoutTime,
         onboardingCompleted: true,
@@ -148,6 +168,8 @@ export const createOnboarding = mutation({
       onboardingCompleted: true,
       units: args.units ?? "metric",
       goals: args.goals,
+      recordingPlan: args.recordingPlan ?? null,
+      restTime: args.restTime ?? "2min",
       preferredWorkoutTime: args.preferredWorkoutTime ?? null,
       createdAt: now,
       updatedAt: now,

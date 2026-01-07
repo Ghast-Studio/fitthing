@@ -54,7 +54,7 @@ export default function GoogleSignIn() {
 
           setActiveResult.match(
             () => {
-              router.replace("/" as any);
+              router.replace("/(home)");
             },
             (err) => {
               console.error(

@@ -1,19 +1,12 @@
-import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useConvexAuth } from "convex/react";
 import { useThemeColor } from "heroui-native";
 
 export default function HomeLayout() {
   const { isLoading, isAuthenticated } = useConvexAuth();
-  const router = useRouter();
   const backgroundColor = useThemeColor("background");
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace("/(auth)/sign-in");
-    }
-  }, [isLoading, isAuthenticated, router]);
+  const foregroundColor = useThemeColor("foreground");
 
   if (isLoading) {
     return (
@@ -31,36 +24,44 @@ export default function HomeLayout() {
     <Stack
       screenOptions={{
         headerStyle: { backgroundColor },
+        headerTintColor: foregroundColor,
+        headerTitleStyle: { color: foregroundColor, fontWeight: "600" },
         contentStyle: { backgroundColor },
       }}
     >
+      {/* Main Tabs */}
       <Stack.Screen
-        name="index"
+        name="(tabs)"
         options={{
-          title: "Home",
           headerShown: false,
         }}
       />
+
+      {/* Onboarding */}
       <Stack.Screen
-        name="exercises"
+        name="onboarding"
         options={{
-          presentation: "modal",
-          title: "Exercises",
+          title: "Willkommen!",
           headerShown: false,
+          presentation: "fullScreenModal",
         }}
       />
+
+      {/* Exercise Details */}
       <Stack.Screen
         name="exercise/[id]"
         options={{
           presentation: "modal",
-          title: "Exercise Details",
+          title: "Übung",
           headerShown: true,
         }}
       />
+
+      {/* Friends */}
       <Stack.Screen
         name="friend/friends"
         options={{
-          title: "Friends",
+          title: "Freunde",
           headerShown: true,
         }}
       />
@@ -68,14 +69,16 @@ export default function HomeLayout() {
         name="friend/add-friend"
         options={{
           presentation: "modal",
-          title: "Add Friend",
+          title: "Freund hinzufügen",
           headerShown: true,
         }}
       />
+
+      {/* Routines */}
       <Stack.Screen
         name="routine/create"
         options={{
-          title: "Create Routine",
+          title: "Routine erstellen",
           headerShown: true,
         }}
       />
@@ -83,50 +86,46 @@ export default function HomeLayout() {
         name="routine/select-exercise"
         options={{
           presentation: "modal",
-          title: "Select Exercise",
+          title: "Übung auswählen",
           headerShown: true,
         }}
       />
+
+      {/* Profile */}
       <Stack.Screen
         name="profile/[id]"
         options={{
-          title: "Profile",
+          title: "Profil",
           headerShown: true,
         }}
       />
       <Stack.Screen
         name="profile/edit"
         options={{
-          title: "Edit Profile",
+          title: "Profil bearbeiten",
           headerShown: true,
         }}
       />
-      <Stack.Screen
-        name="onboarding"
-        options={{
-          title: "Welcome!",
-          headerShown: false,
-          presentation: "fullScreenModal",
-        }}
-      />
+
+      {/* Workouts */}
       <Stack.Screen
         name="workout/active"
         options={{
-          title: "Active Workout",
+          title: "Aktives Training",
           headerShown: true,
         }}
       />
       <Stack.Screen
         name="workout/[id]"
         options={{
-          title: "Workout Details",
+          title: "Training",
           headerShown: true,
         }}
       />
       <Stack.Screen
         name="workout/spectate/[id]"
         options={{
-          title: "Spectating Workout",
+          title: "Training beobachten",
           headerShown: true,
         }}
       />

@@ -71,7 +71,7 @@ export default function StartWorkoutPage() {
 
     result.match(
       () => {
-        router.replace("/workout/active" as any);
+        router.replace("/workout/active");
       },
       () => {
         Alert.alert("Error", "Failed to start workout. Please try again.");

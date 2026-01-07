@@ -53,7 +53,7 @@ export default function AppleSignIn() {
 
           setActiveResult.match(
             () => {
-              router.replace("/" as any);
+              router.replace("/(home)");
             },
             (err) => {
               console.error(

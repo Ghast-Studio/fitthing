@@ -8,20 +8,45 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 
 type Props = AnimatedProps<ViewProps> & {
   className?: string;
+  disableSafeArea?: boolean;
+  disableScrollView?: boolean;
 };
 
-export function Container({ children, className, ...props }: PropsWithChildren<Props>) {
+export function Container({
+  children,
+  className,
+  disableSafeArea = false,
+  disableScrollView = false,
+  ...props
+}: PropsWithChildren<Props>) {
   const insets = useSafeAreaInsets();
 
   return (
     <AnimatedView
       className={cn("flex-1 bg-background", className)}
       style={{
-        paddingBottom: insets.bottom,
+        paddingBottom: disableSafeArea ? 0 : insets.bottom,
       }}
       {...props}
     >
-      <ScrollView contentContainerStyle={{ flexGrow: 1 }}>{children}</ScrollView>
+      {!disableScrollView && (
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <View
+            className="flex-1"
+            style={{ paddingTop: disableSafeArea ? 0 : insets.top }}
+          >
+            {children}
+          </View>
+        </ScrollView>
+      )}
+      {disableScrollView && (
+        <View
+          className="flex-1"
+          style={{ paddingTop: disableSafeArea ? 0 : insets.top }}
+        >
+          {children}
+        </View>
+      )}
     </AnimatedView>
   );
 }

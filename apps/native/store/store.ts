@@ -104,3 +104,99 @@ export const useExerciseDatabaseStore = create<ExerciseDatabaseState>(
       }),
   })
 );
+
+// ===== Onboarding Store =====
+export type RecordingPlan = "minimal" | "balanced" | "detailed" | "custom";
+export type WeeklyGoal = "1" | "2" | "3" | "4" | "5" | "6" | "7";
+export type RestTime = "1min" | "2min" | "5min" | "custom";
+
+export interface OnboardingState {
+  step: number;
+  selectedGoals: string[];
+  recordingPlan: RecordingPlan | null;
+  weeklyGoal: WeeklyGoal;
+  restTime: RestTime;
+  createPlan: boolean;
+  
+  // Actions
+  setStep: (step: number) => void;
+  nextStep: () => void;
+  previousStep: () => void;
+  toggleGoal: (goalId: string) => void;
+  setRecordingPlan: (plan: RecordingPlan) => void;
+  setWeeklyGoal: (goal: WeeklyGoal) => void;
+  setRestTime: (time: RestTime) => void;
+  setCreatePlan: (create: boolean) => void;
+  canProceed: () => boolean;
+  reset: () => void;
+}
+
+const TOTAL_STEPS = 5;
+
+export const useOnboardingStore = create<OnboardingState>((set, get) => ({
+  step: 1,
+  selectedGoals: [],
+  recordingPlan: "balanced",
+  weeklyGoal: "3",
+  restTime: "2min",
+  createPlan: false,
+
+  setStep: (step) => set({ step }),
+  
+  nextStep: () => {
+    const { step } = get();
+    if (step < TOTAL_STEPS) {
+      set({ step: step + 1 });
+    }
+  },
+  
+  previousStep: () => {
+    const { step } = get();
+    if (step > 1) {
+      set({ step: step - 1 });
+    }
+  },
+
+  toggleGoal: (goalId) =>
+    set((state) => ({
+      selectedGoals: state.selectedGoals.includes(goalId)
+        ? state.selectedGoals.filter((g) => g !== goalId)
+        : [...state.selectedGoals, goalId],
+    })),
+
+  setRecordingPlan: (plan) => set({ recordingPlan: plan }),
+  
+  setWeeklyGoal: (goal) => set({ weeklyGoal: goal }),
+  
+  setRestTime: (time) => set({ restTime: time }),
+  
+  setCreatePlan: (create) => set({ createPlan: create }),
+
+  canProceed: () => {
+    const { step, selectedGoals, recordingPlan, weeklyGoal, restTime } = get();
+    switch (step) {
+      case 1:
+        return selectedGoals.length > 0;
+      case 2:
+        return recordingPlan !== null;
+      case 3:
+        return weeklyGoal !== null;
+      case 4:
+        return restTime !== null;
+      case 5:
+        return true;
+      default:
+        return false;
+    }
+  },
+
+  reset: () =>
+    set({
+      step: 1,
+      selectedGoals: [],
+      recordingPlan: null,
+      weeklyGoal: "3",
+      restTime: "2min",
+      createPlan: false,
+    }),
+}));

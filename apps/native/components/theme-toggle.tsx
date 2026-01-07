@@ -5,6 +5,7 @@ import Animated, { FadeOut, ZoomIn } from "react-native-reanimated";
 import { withUniwind } from "uniwind";
 
 import { useAppTheme } from "@/contexts/app-theme-context";
+import { Button } from "heroui-native";
 
 const StyledIonicons = withUniwind(Ionicons);
 
@@ -12,7 +13,7 @@ export function ThemeToggle() {
   const { toggleTheme, isLight } = useAppTheme();
 
   return (
-    <Pressable
+    <Button
       onPress={() => {
         if (Platform.OS === "ios") {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -20,6 +21,7 @@ export function ThemeToggle() {
         toggleTheme();
       }}
       className="px-2.5"
+      variant="ghost"
     >
       {isLight ? (
         <Animated.View key="moon" entering={ZoomIn} exiting={FadeOut}>
@@ -30,6 +32,6 @@ export function ThemeToggle() {
           <StyledIonicons name="sunny" size={20} className="text-foreground" />
         </Animated.View>
       )}
-    </Pressable>
+    </Button>
   );
 }

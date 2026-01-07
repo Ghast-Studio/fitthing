@@ -118,6 +118,24 @@ export const workoutProgressValidator = v.object({
 
 export type WorkoutProgress = Infer<typeof workoutProgressValidator>;
 
+// ===== Recording Plan Enum =====
+export const recordingPlanEnum = v.union(
+  v.literal("minimal"),
+  v.literal("balanced"),
+  v.literal("detailed"),
+  v.literal("custom"),
+  v.null()
+);
+
+// ===== Rest Time Enum =====
+export const restTimeEnum = v.union(
+  v.literal("1min"),
+  v.literal("2min"),
+  v.literal("5min"),
+  v.literal("custom"),
+  v.null()
+);
+
 // ===== User Profile Validator =====
 export const userProfileValidator = v.object({
   userId: v.string(),
@@ -133,6 +151,8 @@ export const userProfileValidator = v.object({
   onboardingCompleted: v.boolean(),
   units: v.union(v.literal("metric"), v.literal("imperial")),
   goals: v.optional(v.array(v.string())),
+  recordingPlan: v.optional(recordingPlanEnum),
+  restTime: v.optional(restTimeEnum),
   preferredWorkoutTime: v.optional(
     v.union(
       v.literal("morning"),

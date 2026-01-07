@@ -1,5 +1,7 @@
 import { useClerk } from "@clerk/clerk-expo";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { Button } from "heroui-native";
 import { Text, TouchableOpacity } from "react-native";
 
 export const SignOutButton = () => {
@@ -11,7 +13,7 @@ export const SignOutButton = () => {
     try {
       await signOut();
       // Redirect to your desired page
-      router.replace("/");
+      router.replace("/(auth)");
     } catch (err) {
       // See https://clerk.com/docs/custom-flows/error-handling
       // for more info on error handling
@@ -20,8 +22,8 @@ export const SignOutButton = () => {
   };
 
   return (
-    <TouchableOpacity onPress={handleSignOut}>
-      <Text>Sign out</Text>
-    </TouchableOpacity>
+    <Button onPress={handleSignOut} variant="ghost">
+      <Button.Label><Ionicons name="log-out" size={24} color="white" /></Button.Label>
+    </Button>
   );
 };
